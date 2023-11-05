@@ -59,9 +59,9 @@ mod tests {
     use super::*;
     #[test]
     fn replace_url_with_markdown_format_test() {
-        let text = "[](https://example.com/)は、とても良いサイトです。Rustについては、本家HPがあります。https://www.rust-lang.org/ とても良く出来ています。";
+        let text = "これは https://reuil.github.io/misc/utf_8_test_page.html です。これは [](https://reuil.github.io/misc/shift_jis_test_page.html)です。";
         let replaced_text = replace_url_with_markdown_format(text);
-        assert_eq!(replaced_text, "[Example Domain](https://example.com/)は、とても良いサイトです。Rustについては、本家HPがあります。[Rust Programming Language](https://www.rust-lang.org/) とても良く出来ています。");
+        assert_eq!(replaced_text, "これは [utf-8で書かれたタイトル](https://reuil.github.io/misc/utf_8_test_page.html) です。これは [shift_jisで書かれたタイトル](https://reuil.github.io/misc/shift_jis_test_page.html)です。");
     }
 
     #[test]
