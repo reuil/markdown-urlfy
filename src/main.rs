@@ -1,12 +1,23 @@
 use std::io;
 
-fn get_html(url: &str) -> String {
-    let body = reqwest::blocking::get(url).unwrap().text().unwrap();
-    body
+fn get_html(url: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = reqwest::blocking::get(url)?;
+    let bytes = response.bytes()?;
+    let body_string = String::from_utf8_lossy(&bytes);
+    let shift_jis_regex =
+        regex::Regex::new(r#"charset=["']?((shift|S(hift|HIFT))_(jis|J(is|IS)))["']?"#).unwrap();
+    let encoding =
+        if shift_jis_regex.is_match(&body_string) {
+            encoding_rs::SHIFT_JIS
+        } else {
+            encoding_rs::UTF_8
+        };
+    let (decoded_string, _, _) = encoding.decode(&bytes);
+    Ok(decoded_string.to_string())
 }
 
 fn get_title(url: &str) -> Option<String> {
-    let body = get_html(url);
+    let body = get_html(url).unwrap();
     let title_start_index = body.find("<title>").unwrap_or(0) + 7;
     let title_end_index = body.find("</title>").unwrap_or(0);
     if title_start_index == 6 || title_end_index == 0 {
@@ -55,8 +66,11 @@ mod tests {
 
     #[test]
     fn get_title_test() {
-        let url = "https://example.com/";
+        let url = "https://reuil.github.io/misc/utf_8_test_page.html";
         let title = get_title(url).unwrap();
-        assert_eq!(title, "Example Domain");
+        assert_eq!(title, "utf-8で書かれたタイトル");
+        let url = "https://reuil.github.io/misc/shift_jis_test_page.html";
+        let title = get_title(url).unwrap();
+        assert_eq!(title, "shift_jisで書かれたタイトル");
     }
 }
