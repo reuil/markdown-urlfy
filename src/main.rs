@@ -1,5 +1,4 @@
 use regex::Regex;
-use reqwest::blocking::get;
 use std::error::Error;
 use std::io;
 
@@ -13,8 +12,18 @@ fn read_buffer() -> String {
 
 fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
     use encoding_rs::{SHIFT_JIS, UTF_8};
-    let response = get(url)?;
+    let client = reqwest::blocking::ClientBuilder::new()
+        .user_agent("markdown-urlfy (github.com/reuil/markdown-urlfy)")
+        .build()
+        .unwrap_or_else(|err| panic!("Failed to build client: {:?}", err));
+    let response = client
+        .get(url)
+        .send()
+        .unwrap_or_else(|err| panic!("Failed to get: {}\nReason: {:?}", url, err));
     let bytes = response.bytes()?;
+    if bytes.is_empty() {
+        panic!("Failed to get: {}\nReason: Empty response", url);
+    }
     let body_string = String::from_utf8_lossy(&bytes);
     let shift_jis_regex =
         Regex::new(r#"charset=["']?((shift|S(hift|HIFT))_(jis|J(is|IS)))["']?"#).unwrap();
@@ -32,9 +41,19 @@ fn get_title(url: &str) -> Result<String, Box<dyn Error>> {
     let title_regex = Regex::new(r"<title>(.*)</title>").unwrap();
     let title = title_regex
         .captures(&html)
-        .unwrap()
+        .unwrap_or_else(|| {
+            panic!(
+                "Failed to get title from: {}\n Reason: Maybe invalid html",
+                url
+            )
+        })
         .get(1)
-        .unwrap()
+        .unwrap_or_else(|| {
+            panic!(
+                "Failed to get title from: {}\n Reason: Maybe there is no title tag",
+                url
+            )
+        })
         .as_str();
     Ok(title.to_string())
 }
