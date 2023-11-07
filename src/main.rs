@@ -1,5 +1,4 @@
 use regex::Regex;
-use reqwest::blocking::get;
 use std::error::Error;
 use std::io;
 
@@ -13,7 +12,13 @@ fn read_buffer() -> String {
 
 fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
     use encoding_rs::{SHIFT_JIS, UTF_8};
-    let response = get(url)?;
+    let client = reqwest::blocking::ClientBuilder::new()
+        .user_agent("markdown-urlfy (github.com/reuil/markdown-urlfy)")
+        .build().unwrap();
+    let response = client
+        .get(url)
+        .send()
+        .unwrap();
     let bytes = response.bytes()?;
     let body_string = String::from_utf8_lossy(&bytes);
     let shift_jis_regex =
