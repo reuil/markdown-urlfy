@@ -1,3 +1,4 @@
+use html_escape::decode_html_entities;
 use regex::Regex;
 use std::error::Error;
 use std::io;
@@ -33,6 +34,7 @@ fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
         UTF_8
     };
     let (decoded_string, _, _) = encoding.decode(&bytes);
+    let decoded_string = decode_html_entities(&decoded_string);
     Ok(decoded_string.to_string())
 }
 
