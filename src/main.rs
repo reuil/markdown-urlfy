@@ -103,12 +103,24 @@ mod tests {
     }
 
     #[test]
-    fn get_title_test() {
+    fn test_get_title_with_utf_8() {
         let url = "https://reuil.github.io/misc/utf_8_test_page.html";
         let title = get_title(url).unwrap();
         assert_eq!(title, "utf-8で書かれたタイトル");
+    }
+    #[test]
+    fn test_get_title_with_shift_jis() {
         let url = "https://reuil.github.io/misc/shift_jis_test_page.html";
         let title = get_title(url).unwrap();
         assert_eq!(title, "shift_jisで書かれたタイトル");
+    }
+    // titleタグがないときのテストコード
+    #[test]
+    fn test_get_title_without_title() {
+        let url = "https://reuil.github.io/misc/utf_8_test_page_without_title.html";
+        let title = get_title(url);
+        assert!(title.is_err_and(|e| e
+            .to_string()
+            .contains("Maybe invalid html or title tag is not found")));
     }
 }
