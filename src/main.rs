@@ -17,17 +17,22 @@ fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
         .user_agent("markdown-urlfy (github.com/reuil/markdown-urlfy)")
         .build()
         .unwrap_or_else(|err| panic!("Failed to build client: {:?}", err));
+
     let response = client
         .get(url)
         .send()
-        .unwrap_or_else(|err| panic!("Failed to get: {}\nReason: {:?}", url, err));
-    let bytes = response.bytes()?;
+        .map_err(|err| format!("Failed to get: {}\nReason: {}", url, err))?;
+
+    let bytes = response
+        .bytes()
+        .map_err(|err| format!("Failed to get: {}\nReason: {}", url, err))?;
+
     if bytes.is_empty() {
-        panic!("Failed to get: {}\nReason: Empty response", url);
+        return Err("Empty response".into());
     }
+
     let body_string = String::from_utf8_lossy(&bytes);
-    let shift_jis_regex =
-        Regex::new(r#"charset=["']?((shift|S(hift|HIFT))_(jis|J(is|IS)))["']?"#).unwrap();
+    let shift_jis_regex = Regex::new(r#"charset=["']?((shift|S(hift|HIFT))_(jis|J(is|IS)))["']?"#)?;
     let encoding = if shift_jis_regex.is_match(&body_string) {
         SHIFT_JIS
     } else {
@@ -40,34 +45,42 @@ fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
 
 fn get_title(url: &str) -> Result<String, Box<dyn Error>> {
     let html = get_html(url)?;
-    let title_regex = Regex::new(r"<title>(.*)</title>").unwrap();
+    let title_regex = Regex::new(r"<title>(.*)</title>").unwrap_or_else(|err| {
+        panic!(
+            "Failed to compile regex: {}\nReason: Maybe invalid regex",
+            err
+        )
+    });
     let title = title_regex
         .captures(&html)
-        .unwrap_or_else(|| {
-            panic!(
-                "Failed to get title from: {}\n Reason: Maybe invalid html",
-                url
+        .ok_or_else(|| {
+            format!(
+                "Failed to get title from: {}\nReason: Maybe invalid html or title tag is not found",
+                url,
             )
-        })
+        })?
         .get(1)
-        .unwrap_or_else(|| {
-            panic!(
-                "Failed to get title from: {}\n Reason: Maybe there is no title tag",
+        .ok_or_else(|| {
+            format!(
+                "Failed to get title from: {}\nReason: Maybe invalid html or title tag is not found",
                 url
             )
-        })
+        })?
         .as_str();
     Ok(title.to_string())
 }
 
 fn replace_url_with_markdown_format(text: &str) -> String {
     let url_regex = Regex::new(r"(\[\]\()?https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.,~#?&//=]*)\)?")
-        .unwrap();
+        .unwrap_or_else(|err| panic!("Failed to compile regex: {}", err));
     let mut replaced_text = text.to_string();
     url_regex.find_iter(text).for_each(|m| {
         let url = m.as_str().trim_start_matches("[](").trim_end_matches(")"); // Get the part surrounded by []()
-        let title = get_title(url).unwrap_or("".to_string());
-        let title = title.trim();
+        let binding = get_title(url)
+            .map_err(|err| eprintln!("{}", err))
+            .ok()
+            .unwrap_or("".to_string());
+        let title = binding.trim();
         let markdown_format = format!("[{}]({})", title, url);
         replaced_text = replaced_text.replace(m.as_str(), &markdown_format);
     });
