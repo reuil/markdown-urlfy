@@ -45,7 +45,7 @@ fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
 
 fn get_title(url: &str) -> Result<String, Box<dyn Error>> {
     let html = get_html(url)?;
-    let title_regex = Regex::new(r"<title>([\s\S]*)</title>").unwrap_or_else(|err| {
+    let title_regex = Regex::new(r"<title>([\s\S]*?)</title>").unwrap_or_else(|err| {
         panic!(
             "Failed to compile regex: {}\nReason: Maybe invalid regex",
             err
