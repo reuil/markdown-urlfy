@@ -97,7 +97,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn replace_url_with_markdown_format_test() {
+    fn test_replace_url_with_markdown_format() {
         let text = "これは https://reuil.github.io/project/markdown-urlfy/testpage/utf_8.html です。これは [](https://reuil.github.io/project/markdown-urlfy/testpage/shift_jis.html)です。";
         let replaced_text = replace_url_with_markdown_format(text);
         assert_eq!(replaced_text, "これは [utf-8で書かれたタイトル](https://reuil.github.io/project/markdown-urlfy/testpage/utf_8.html) です。これは [shift_jisで書かれたタイトル](https://reuil.github.io/project/markdown-urlfy/testpage/shift_jis.html)です。");
