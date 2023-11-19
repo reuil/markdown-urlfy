@@ -45,7 +45,7 @@ fn get_html(url: &str) -> Result<String, Box<dyn Error>> {
 
 fn get_title(url: &str) -> Result<String, Box<dyn Error>> {
     let html = get_html(url)?;
-    let title_regex = Regex::new(r"<title>(.*)</title>").unwrap_or_else(|err| {
+    let title_regex = Regex::new(r"<title>([\s\S]*)</title>").unwrap_or_else(|err| {
         panic!(
             "Failed to compile regex: {}\nReason: Maybe invalid regex",
             err
@@ -95,32 +95,50 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
-    fn replace_url_with_markdown_format_test() {
-        let text = "これは https://reuil.github.io/misc/utf_8_test_page.html です。これは [](https://reuil.github.io/misc/shift_jis_test_page.html)です。";
+    fn test_replace_url_with_markdown_format() {
+        let text = "これは https://reuil.github.io/project/markdown-urlfy/testpage/utf_8.html です。これは [](https://reuil.github.io/project/markdown-urlfy/testpage/shift_jis.html)です。";
         let replaced_text = replace_url_with_markdown_format(text);
-        assert_eq!(replaced_text, "これは [utf-8で書かれたタイトル](https://reuil.github.io/misc/utf_8_test_page.html) です。これは [shift_jisで書かれたタイトル](https://reuil.github.io/misc/shift_jis_test_page.html)です。");
+        assert_eq!(replaced_text, "これは [utf-8で書かれたタイトル](https://reuil.github.io/project/markdown-urlfy/testpage/utf_8.html) です。これは [shift_jisで書かれたタイトル](https://reuil.github.io/project/markdown-urlfy/testpage/shift_jis.html)です。");
+    }
+
+    #[test]
+    fn test_replace_url_with_markdown_format_with_newline_in_title() {
+        let text = "これは https://reuil.github.io/project/markdown-urlfy/testpage/utf_8_with_newline_in_title.html です。";
+        let replaced_text = replace_url_with_markdown_format(text);
+        assert_eq!(replaced_text, "これは [utf-8で書かれたタイトル](https://reuil.github.io/project/markdown-urlfy/testpage/utf_8_with_newline_in_title.html) です。");
     }
 
     #[test]
     fn test_get_title_with_utf_8() {
-        let url = "https://reuil.github.io/misc/utf_8_test_page.html";
+        let url = "https://reuil.github.io/project/markdown-urlfy/testpage/utf_8.html";
         let title = get_title(url).unwrap();
         assert_eq!(title, "utf-8で書かれたタイトル");
     }
+
     #[test]
     fn test_get_title_with_shift_jis() {
-        let url = "https://reuil.github.io/misc/shift_jis_test_page.html";
+        let url = "https://reuil.github.io/project/markdown-urlfy/testpage/shift_jis.html";
         let title = get_title(url).unwrap();
         assert_eq!(title, "shift_jisで書かれたタイトル");
     }
-    // titleタグがないときのテストコード
+
     #[test]
     fn test_get_title_without_title() {
-        let url = "https://reuil.github.io/misc/utf_8_test_page_without_title.html";
+        let url =
+            "https://reuil.github.io/project/markdown-urlfy/testpage/utf_8_without_title.html";
         let title = get_title(url);
         assert!(title.is_err_and(|e| e
             .to_string()
             .contains("Maybe invalid html or title tag is not found")));
+    }
+
+    #[test]
+    fn test_get_title_with_newline_in_title() {
+        let url =
+            "https://reuil.github.io/project/markdown-urlfy/testpage/utf_8_with_newline_in_title.html";
+        let title = get_title(url).unwrap();
+        assert_eq!(title, "\n        utf-8で書かれたタイトル\n    ");
     }
 }
